@@ -212,7 +212,7 @@ def make_tensors():
 def features_labels_split(ts: np.ndarray, st: np.ndarray, att_ind: int, ts_dict: dict, st_dict: dict,
                           history: int = 1, surrounding: int = 0, ):
     """
-    Reshape the data to pairs of features and labels
+    Reshape the data to pairs of features and labels, while mainting the temporal/spatial structure
     :param ts: the time series tensor created by build_tensors
     :param st: the static tensor created by build_tensors
     :param att_ind: index of attribute that will be predicted in the final model
@@ -222,8 +222,8 @@ def features_labels_split(ts: np.ndarray, st: np.ndarray, att_ind: int, ts_dict:
     :param surrounding: the radius around the point to use as features (i.e. how much spatial information the model has)
     :return: the function returns 3 objects:
                 - A numpy array with shape [# data points, # features] containing all of the feature vectors in the
-                  data. The number of data points will be calculate as follows:
-                        <# data points> = (<# years> - history) x (<# spatial pixels> - 2 x surrounding)
+                  data. The data points will have the following shape:
+                        <# data points> = [(<# years> - history), x - 2 x surrounding, y - 2 x surrounding)
                 - A numpy array with shape [# data points,] containing all of the labels of the data
                 - A list of the names of each feature, which will be used later on for feature importance. The length
                   of this list will be <# features>. The number of features each data point will have is dependent on
@@ -274,6 +274,19 @@ def features_labels_split(ts: np.ndarray, st: np.ndarray, att_ind: int, ts_dict:
 
 def blocked_folds(X: np.ndarray, y: np.ndarray, num_splits: int = 10, spatial_boundary: int = 10,
                   temporal_boundary: int = 1, sp_block_sz: int = 20, t_block_sz: int = 3):
+    """
+    Create temporal-spatial "blocks" in the data to remove auto-correlation while training, validating and testing. As
+    part of this process, some data will be dropped. This is to allow some padding between different temporal-spatial
+    blocks, hopefully reducing as much of the auto-correlation in the data for the training
+    :param X: temporal-spatial features in a numpy array with the shape [t, x, y, # features] to split into blocks
+    :param y: temporal-spatial labels in a numpy array with shape [t, x, y] to split into blocks
+    :param num_splits: number of folds (for k-folds) that the data will be split into
+    :param spatial_boundary: how much spatial padding should be added between different blocks
+    :param temporal_boundary: how much temporal padding should be added between different blocks
+    :param sp_block_sz: the maximum spatial area each block will have
+    :param t_block_sz: the maximum temporal area each block will have
+    :return: The data without the dropped data points as well as the indices for each fold as a numpy array
+    """
     inds = -1 * np.ones(y.shape)
     counter = 0
     for t in range(0, inds.shape[0] - t_block_sz, t_block_sz + temporal_boundary):
@@ -288,15 +301,33 @@ def blocked_folds(X: np.ndarray, y: np.ndarray, num_splits: int = 10, spatial_bo
     return X_fold, y_fold, inds
 
 
-def make_save():
-    ts, st, dicts = make_tensors()
-    np.save('timeseries_tensor.npy', ts)
-    np.save('static_tensor.npy', st)
-    with open('att_dicts.pkl', 'wb') as f: pickle.dump(dicts, f)
+def reshape_for_optim(X: np.ndarray, y: np.ndarray):
+    """
+    Reshape the data to match the general scheme of optimization models in sklearn
+    :param X: temporal-spatial features in a numpy array with the shape [t, x, y, # features] to split into blocks
+    :param y: temporal-spatial labels in a numpy array with shape [t, x, y] to split into blocks
+    :return: X reshaped to [<# samples>, <# features>] and y reshaped to [<#samples>]
+    """
+    return X.reshape(-1, X.shape[-1]), y.flatten()
 
 
-ts = np.load('timeseries_tensor.npy')
-st = np.load('static_tensor.npy')
-with open('att_dicts.pkl', 'rb') as f: ts_dict, st_dict = pickle.load(f)
-X, y, names = features_labels_split(ts, st, ts_dict['ndvi'], ts_dict, st_dict, surrounding=1)
-blocked_folds(X, y)
+# load data and create tensors
+ts, st, (ts_dict, st_dict) = make_tensors()
+
+# save the tensors to remove redundant recomputations each run
+np.save('timeseries_tensor.npy', ts)
+np.save('static_tensor.npy', st)
+with open('att_dicts.pkl', 'wb') as f: pickle.dump((ts_dict, st_dict), f)
+
+# load the data by uncommenting the following block
+# ts = np.load('timeseries_tensor.npy')
+# st = np.load('static_tensor.npy')
+# with open('att_dicts.pkl', 'rb') as f: ts_dict, st_dict = pickle.load(f)
+
+# create temporal-spatial feature and label tensors
+X, y, names = features_labels_split(ts, st, ts_dict['ndvi'], ts_dict, st_dict, history=1, surrounding=0)
+# split into blocks
+X, y, inds = blocked_folds(X, y, num_splits=10, spatial_boundary=10, temporal_boundary=1, sp_block_sz=20, t_block_sz=3)
+# flatten into proper feature and label vectors; after this step, the data should be ready for training
+X_fl, y_fl = reshape_for_optim(X, y)
+
