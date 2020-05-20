@@ -8,15 +8,16 @@ import warnings
 warnings.filterwarnings("ignore")
 
 # parameters:
-ts_base_att = 'soil'  # the attribute that should be used as the "base" of the time series (meaning all other
-# attributes time series should be aligned to it)
+ts_base_att = 'soil'  # the attribute that should be used as the "base" of the time series (meaning all the other
+                      # attributes' time series should be aligned to it)
 
-
+# possible aggregations (averaging, summing, minimum and maximum)
 avg_func = lambda x: np.mean(x, axis=0)
 sum_func = lambda x: np.sum(x, axis=0)
 min_func = lambda x: np.nanmin(x, axis=0)
 max_func = lambda x: np.nanmax(x, axis=0)
 
+# dictionary of commands for aggregation of time series attributes across a year
 agg_dict = {
     'ndvi': (lambda x, y: agg_func(ts=x, tensor=y, agg_months=[7, 8, 9, 10], func=min_func)),
     'aet': (lambda x, y: agg_func(ts=x, tensor=y, func=max_func)),
@@ -32,6 +33,15 @@ agg_dict = {
 
 
 def agg_func(ts: pd.Series, tensor: np.ndarray, agg_months=tuple([(7 + i) % 12 + 1 for i in range(12)]), func=avg_func):
+    """
+    A helper function used to aggregated the wanted statistics in the time series
+    :param ts: a pandas series with the times that each data point was sampled at
+    :param tensor: the data tensor that will be aggregated according to the specified rules
+    :param agg_months: the months that the data should be aggregated over (starting from July since this was the first
+                       instance of a datapoint in the provided data
+    :param func: the function that should be used to aggregate the data (averaging, summing, min or max)
+    :return: a numpy array containing the year-long aggregated statistics
+    """
     months = np.array([a.month for a in ts])
     if months[0] != agg_months[0]:
         s_ind = np.where(months == agg_months[0])[0][0]
@@ -104,13 +114,24 @@ def interpolate_ts(df):
 
 
 def build_tensors(df, fdf):
-    # the shape of the output tensor will be [#atts, #years, x, y]
+    """
+    Creates data tensors out of the initialized DataFrame for ease of access later on in the code
+    :param df: the time series DataFrame (the DataFrame that contains all temporal attributes)
+    :param fdf: the constant's DataFrame (the DataFrame that contains all none temporal attributes)
+    :return: 2 numpy arrays. The first will hold all of the time series information whose shape is [#atts, #years, x, y]
+             The second array will hold all of the time-invariant information, whose shape is [#atts, x, y]. Finally, a
+             2-tuple containing attribute names to indices for the time series array and the static array is also
+             returned
+    """
+    # the shape of the time series (ts) tensor will be [#atts, #years, x, y]
     shape = (df.ts.unique().shape[0], df.img[0].shape[0], df.img[0].shape[1])
     attributes = df.att.unique()
     time_stamps = df.ts.unique()
     print(attributes)
+    # create a dictionary that maps ts attribute names to indices in the output tensor
     ts_att2ind = {a: i for i, a in enumerate(attributes)}
 
+    # create the ts tensor
     ts_tensor = []
     for i, at in enumerate(attributes):
         tmp_ten = np.zeros(shape)
@@ -119,10 +140,12 @@ def build_tensors(df, fdf):
         ts_tensor.append(agg_dict[at](df.loc[df['att'] == at]['ts'], tmp_ten))
     ts_tensor = np.array(ts_tensor)
 
+    # the shape of the static (st) tensor will be [#atts, x, y]
     shape = (fdf.att.unique().shape[0], list(fdf['img'])[0].shape[0], list(fdf['img'])[0].shape[1])
     attributes = fdf.att.unique()
+    # create a dictionary that maps ts attribute names to indices in the output tensor
     st_att2ind = {a: i for i, a in enumerate(attributes)}
-    stat_tensor = np.zeros(shape)
+    stat_tensor = np.zeros(shape)  # todo create the static tensor
     return ts_tensor, stat_tensor, (ts_att2ind, st_att2ind)
 
 
@@ -154,6 +177,11 @@ def build_model(df, fdf, forecast_horizon):
 
 
 def make_tensors():
+    """
+    Read the raw data and create the relevant tensors from them
+    :return: Creates the time series and static tensors by calling build_tensors on two DataFrames that are created
+             from the data
+    """
     df, fdf = buildindex(path='data/', printstats=True)
     df = interpolate_ts(df)  # temporal interpolation
 
@@ -181,13 +209,36 @@ def make_tensors():
     return build_tensors(df, fdf)
 
 
-def ready_data(ts: np.ndarray, st: np.ndarray, att_ind: int, ts_dict: dict, st_dict: dict,
-               history: int = 1, surrounding: int = 0, ):
+def features_labels_split(ts: np.ndarray, st: np.ndarray, att_ind: int, ts_dict: dict, st_dict: dict,
+                          history: int = 1, surrounding: int = 0, ):
+    """
+    Reshape the data to pairs of features and labels
+    :param ts: the time series tensor created by build_tensors
+    :param st: the static tensor created by build_tensors
+    :param att_ind: index of attribute that will be predicted in the final model
+    :param ts_dict: dictionary that maps between attribute's names and their indices in the ts tensor
+    :param st_dict: dictionary that maps between attribute's names and their indices in the st tensor
+    :param history: size of the look back window (i.e. how far back the model can see)
+    :param surrounding: the radius around the point to use as features (i.e. how much spatial information the model has)
+    :return: the function returns 3 objects:
+                - A numpy array with shape [# data points, # features] containing all of the feature vectors in the
+                  data. The number of data points will be calculate as follows:
+                        <# data points> = (<# years> - history) x (<# spatial pixels> - 2 x surrounding)
+                - A numpy array with shape [# data points,] containing all of the labels of the data
+                - A list of the names of each feature, which will be used later on for feature importance. The length
+                  of this list will be <# features>. The number of features each data point will have is dependent on
+                  the function inputs. It's calculation is as follows:
+                        <# features> = (<# ts attributes> + <# st attributes>) x <history> x (2x<surrounding> + 1)^2
+                  As you can see, surrounding is the radius around the point that the model will see.
+    """
     n_ts = ts.shape[0]
     outp = np.zeros((ts.shape[1] - history, ts.shape[2] - 2 * surrounding, ts.shape[3] - 2 * surrounding,
                      ts.shape[0] + st.shape[0], history, 2 * surrounding + 1, 2 * surrounding + 1))
 
+    # create vector of labels (what the model will try to predict later on)
     pred = ts[att_ind, history:, surrounding:-surrounding, surrounding:-surrounding]
+
+    # rearrange the tensor to create the features of each data point
     for t in range(ts.shape[1] - history):
         for i in range(surrounding, ts.shape[2] - surrounding):
             for j in range(surrounding, ts.shape[3] - surrounding):
@@ -197,8 +248,9 @@ def ready_data(ts: np.ndarray, st: np.ndarray, att_ind: int, ts_dict: dict, st_d
                 outp[t, i - surrounding, j - surrounding, n_ts:, :] = st[:, i - surrounding:i + surrounding + 1,
                                                                       j - surrounding:j + surrounding + 1][:, None, ...]
 
-    feat_names = np.zeros((ts.shape[0] + st.shape[0], history, 2 * surrounding + 1, 2 * surrounding + 1)).astype(
-        dtype=str)
+    # create a list of feature names so that later we will be able to extract some information from feature importance
+    feat_names = np.zeros((ts.shape[0] + st.shape[0], history, 2 * surrounding + 1,
+                           2 * surrounding + 1)).astype(dtype=str)
     for k in ts_dict:
         feat_names[ts_dict[k]] = k + '_'
     for k in st_dict:
@@ -214,13 +266,14 @@ def ready_data(ts: np.ndarray, st: np.ndarray, att_ind: int, ts_dict: dict, st_d
         feat_names[:, :, :, i] = 'Y{}'.format(i - surrounding)
     y = list(feat_names.flatten())
     feat_names = [prefix[i] + times[i] + x[i] + y[i] for i in range(len(prefix))]
+
+    # reshape the output to the correct shape
     outp = outp.reshape(list(outp.shape[:-4]) + [np.prod(outp.shape[-4:])])
     return outp, pred, feat_names
 
 
 def blocked_folds(X: np.ndarray, y: np.ndarray, num_splits: int = 10, spatial_boundary: int = 10,
-                  temporal_boundary: int = 1,
-                  sp_block_sz: int = 20, t_block_sz: int = 3):
+                  temporal_boundary: int = 1, sp_block_sz: int = 20, t_block_sz: int = 3):
     inds = -1 * np.ones(y.shape)
     counter = 0
     for t in range(0, inds.shape[0] - t_block_sz, t_block_sz + temporal_boundary):
@@ -245,5 +298,5 @@ def make_save():
 ts = np.load('timeseries_tensor.npy')
 st = np.load('static_tensor.npy')
 with open('att_dicts.pkl', 'rb') as f: ts_dict, st_dict = pickle.load(f)
-X, y, names = ready_data(ts, st, ts_dict['ndvi'], ts_dict, st_dict, surrounding=1)
+X, y, names = features_labels_split(ts, st, ts_dict['ndvi'], ts_dict, st_dict, surrounding=1)
 blocked_folds(X, y)
