@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-import rasterio as rio
+# import rasterio as rio
 import numpy as np
 import pickle
 import warnings
@@ -133,7 +133,9 @@ def build_tensors(df, fdf):
 
     # create the ts tensor
     ts_tensor = []
+    print('Creating tensor values for attribute:', flush=True, end=' ')
     for i, at in enumerate(attributes):
+        print(at, flush=True, end=' ')
         tmp_ten = np.zeros(shape)
         for j, t in enumerate(time_stamps):
             tmp_ten[j] = df.loc[df['att'] == at].loc[df['ts'] == t]['img'][0]
@@ -145,38 +147,13 @@ def build_tensors(df, fdf):
     attributes = fdf.att.unique()
     # create a dictionary that maps ts attribute names to indices in the output tensor
     st_att2ind = {a: i for i, a in enumerate(attributes)}
-    stat_tensor = np.zeros(shape)  # todo create the static tensor
+    stat_tensor = np.zeros(shape)
+    for i, at in enumerate(attributes):
+        stat_tensor[i] = fdf.loc[fdf['att'] == at]['img'].iloc[0]
     return ts_tensor, stat_tensor, (ts_att2ind, st_att2ind)
 
 
-def build_model(df, fdf, forecast_horizon):
-    """
-    df: 4D data: att,time,x,y
-    fdf: 3D data: att,x,y (fixed attributes (non-time-varying attributes) (have NaT in the ts col))
-    forecast_horizon: forecast horizon in months
-
-    returns:
-        model
-        feature importance: feature name syntax: <feature_name:att:radius:neighbor_id>
-        ...
-
-    plan:
-        show hierarchy (with temporal/spatial neighbors in given radius) features importance using different models (corr, forest, ...)
-            CV: use proper method without spatial/temporal autocorr
-        show ranges to better describe the relations
-        use pysal?
-        use different lookback_win for building the features (aggregating the data in the recent time series into features)
-
-    todo:
-        drop nans
-
-    todo optimizations:
-        if we see that for different horizon the feature engineering takes long time for the same actions we can optimize it later
-    """
-    return None
-
-
-def make_tensors():
+def make_dataframes():
     """
     Read the raw data and create the relevant tensors from them
     :return: Creates the time series and static tensors by calling build_tensors on two DataFrames that are created
@@ -206,7 +183,7 @@ def make_tensors():
     df['img'] = df.path.map(imgs)
     fdf['img'] = fdf.path.map(imgs)
 
-    return build_tensors(df, fdf)
+    return df, fdf
 
 
 def features_labels_split(ts: np.ndarray, st: np.ndarray, att_ind: int, ts_dict: dict, st_dict: dict,
@@ -236,7 +213,10 @@ def features_labels_split(ts: np.ndarray, st: np.ndarray, att_ind: int, ts_dict:
                      ts.shape[0] + st.shape[0], history, 2 * surrounding + 1, 2 * surrounding + 1))
 
     # create vector of labels (what the model will try to predict later on)
-    pred = ts[att_ind, history:, surrounding:-surrounding, surrounding:-surrounding]
+    if surrounding > 0:
+        pred = ts[att_ind, history:, surrounding:-surrounding, surrounding:-surrounding]
+    else:
+        pred = ts[att_ind, history:]
 
     # rearrange the tensor to create the features of each data point
     for t in range(ts.shape[1] - history):
@@ -301,33 +281,41 @@ def blocked_folds(X: np.ndarray, y: np.ndarray, num_splits: int = 10, spatial_bo
     return X_fold, y_fold, inds
 
 
-def reshape_for_optim(X: np.ndarray, y: np.ndarray):
+def reshape_for_optim(X: np.ndarray, y: np.ndarray, inds: np.ndarray):
     """
-    Reshape the data to match the general scheme of optimization models in sklearn
+    Reshape the data to match the general scheme of optimization models in sklearn, and drop all nan entries
     :param X: temporal-spatial features in a numpy array with the shape [t, x, y, # features] to split into blocks
     :param y: temporal-spatial labels in a numpy array with shape [t, x, y] to split into blocks
     :return: X reshaped to [<# samples>, <# features>] and y reshaped to [<#samples>]
     """
-    return X.reshape(-1, X.shape[-1]), y.flatten()
+    X, y = X.reshape(-1, X.shape[-1]), y.flatten()
+    inds = ~(np.isnan(y) | np.isnan(np.sum(X, axis=1)))
+    return X[inds], y[inds], inds[inds]
 
 
-# load data and create tensors
-ts, st, (ts_dict, st_dict) = make_tensors()
+if __name__ == '__main__':
 
-# save the tensors to remove redundant recomputations each run
-np.save('timeseries_tensor.npy', ts)
-np.save('static_tensor.npy', st)
-with open('att_dicts.pkl', 'wb') as f: pickle.dump((ts_dict, st_dict), f)
+    # load data and create tensors
+    # df, fdf = make_dataframes()
+    # df = pd.read_pickle('df.pkl')
+    # fdf = pd.read_pickle('fdf.pkl')
+    # ts, st, (ts_dict, st_dict) = build_tensors(df, fdf)
 
-# load the data by uncommenting the following block
-# ts = np.load('timeseries_tensor.npy')
-# st = np.load('static_tensor.npy')
-# with open('att_dicts.pkl', 'rb') as f: ts_dict, st_dict = pickle.load(f)
+    # save the tensors to remove redundant recomputations each run
+    # np.save('timeseries_tensor.npy', ts)
+    # np.save('static_tensor.npy', st)
+    # with open('att_dicts.pkl', 'wb') as f: pickle.dump((ts_dict, st_dict), f)
 
-# create temporal-spatial feature and label tensors
-X, y, names = features_labels_split(ts, st, ts_dict['ndvi'], ts_dict, st_dict, history=1, surrounding=0)
-# split into blocks
-X, y, inds = blocked_folds(X, y, num_splits=10, spatial_boundary=10, temporal_boundary=1, sp_block_sz=20, t_block_sz=3)
-# flatten into proper feature and label vectors; after this step, the data should be ready for training
-X_fl, y_fl = reshape_for_optim(X, y)
+    # load the data by uncommenting the following block
+    ts = np.load('timeseries_tensor.npy')
+    st = np.load('static_tensor.npy')
+    with open('att_dicts.pkl', 'rb') as f: ts_dict, st_dict = pickle.load(f)
+
+    # create temporal-spatial feature and label tensors
+    X, y, names = features_labels_split(ts, st, ts_dict['ndvi'], ts_dict, st_dict, history=1, surrounding=0)
+    # split into blocks
+    X, y, inds = blocked_folds(X, y, num_splits=10, spatial_boundary=10, temporal_boundary=1, sp_block_sz=20, t_block_sz=3)
+
+    # flatten into proper feature and label vectors; after this step, the data should be ready for training
+    X_fl, y_fl, inds = reshape_for_optim(X, y, inds)
 
