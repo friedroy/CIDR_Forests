@@ -39,14 +39,17 @@ with open('att_dicts.pkl', 'rb') as f: ts_dict, st_dict = pickle.load(f)
 # create temporal-spatial feature and label tensors
 X, y, names = features_labels_split(ts, st, ts_dict['ndvi'], ts_dict, st_dict, history=1, surrounding=0)
 # split into blocks
-X, y, inds = blocked_folds(X, y, num_splits=20, spatial_boundary=10, temporal_boundary=1, sp_block_sz=10, t_block_sz=3)
+X, y, inds = blocked_folds(X, y, num_splits=12, spatial_boundary=10, temporal_boundary=1, sp_block_sz=10, t_block_sz=3)
 # flatten into proper feature and label vectors; after this step, the data should be ready for training
 X_fl, y_fl, inds = reshape_for_optim(X, y, inds)
+print('# total samples = {}'.format(len(inds)))
 
 hold_out = (X_fl[inds == np.max(inds)], y_fl[inds == np.max(inds)])
 tX, ty, tinds = X_fl[inds != np.max(inds)], y_fl[inds != np.max(inds)], inds[inds != np.max(inds)]
+print('# train samples = {}'.format(len(tinds)))
+print('# test samples = {}'.format(len(hold_out[1])))
 
-print('Mean of true y values: {:.3f} +- {:.3f}'.format(np.mean(ty), np.std(ty)))
+print('\nMean of true y values: {:.3f} +- {:.3f}'.format(np.mean(ty), np.std(ty)))
 
 # returning the mean as the predicted value (as a baseline)
 scores = np.sqrt(np.mean((np.mean(ty) - ty)**2))
@@ -75,3 +78,4 @@ print('\t\tMax = {:.7f},  Min = {:.7f}'.format(np.max(scores), np.min(scores)))
 
 # todo test best model after validation on the held out data
 # todo check how the models are affected by the block sizes and boundaries
+# todo fix the manner in which the test samples are chosen
