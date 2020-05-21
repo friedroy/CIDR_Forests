@@ -4,10 +4,9 @@
 as a function of time (this will give us a general idea of how the data "feels")
 - [x] Create k-fold blocks separated with a margin between different times/spatial locations (according 
 to [this](https://onlinelibrary.wiley.com/doi/10.1111/ecog.02881))
-- [ ] Debug the created blocks and see that there was no scrambling in the data
-- [ ] Fully document code 
+- [x] Fully document code 
 - [ ] Visualize spatial/temporal correlation in and outside of blocks (this will help decide how much we actually need to "pad" the blocks to remove autocorrelation)
-- [ ] Create code for k-folds of blocks (for model validation)
+- [x] Create code for k-folds of blocks (for model validation)
 - [ ] Train a Decision Tree (DF) model on the blocks that are not auto-correlated
 - [ ] Train a Random Forest (RF) model on the blocks that are not auto-correlated
 - [ ] Visualize in some manner the feature significance learned by the DF\RF 
