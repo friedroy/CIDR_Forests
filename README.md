@@ -7,8 +7,8 @@ to [this](https://onlinelibrary.wiley.com/doi/10.1111/ecog.02881))
 - [x] Fully document code 
 - [ ] Visualize spatial/temporal correlation in and outside of blocks (this will help decide how much we actually need to "pad" the blocks to remove autocorrelation)
 - [x] Create code for k-folds of blocks (for model validation)
-- [ ] Train a Decision Tree (DF) model on the blocks that are not auto-correlated
-- [ ] Train a Random Forest (RF) model on the blocks that are not auto-correlated
+- [x] Train a Decision Tree (DF) model on the blocks that are not auto-correlated
+- [x] Train a Random Forest (RF) model on the blocks that are not auto-correlated
 - [ ] Visualize in some manner the feature significance learned by the DF\RF 
 
 

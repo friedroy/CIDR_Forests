@@ -314,7 +314,8 @@ if __name__ == '__main__':
     # create temporal-spatial feature and label tensors
     X, y, names = features_labels_split(ts, st, ts_dict['ndvi'], ts_dict, st_dict, history=1, surrounding=0)
     # split into blocks
-    X, y, inds = blocked_folds(X, y, num_splits=10, spatial_boundary=10, temporal_boundary=1, sp_block_sz=20, t_block_sz=3)
+    X, y, inds = blocked_folds(X, y, num_splits=10, spatial_boundary=10, temporal_boundary=1, sp_block_sz=20,
+                               t_block_sz=3)
 
     # flatten into proper feature and label vectors; after this step, the data should be ready for training
     X_fl, y_fl, inds = reshape_for_optim(X, y, inds)
