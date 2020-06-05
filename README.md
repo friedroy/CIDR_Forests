@@ -1,14 +1,14 @@
 # To Do List 
 - [x] Load image data and organize according to time series
-- [ ] Visualize general information about the data - for instance, what is the average change in each of the attributes 
+- [x] Visualize general information about the data - for instance, what is the average change in each of the attributes 
 as a function of time (this will give us a general idea of how the data "feels")
 - [x] Create k-fold blocks separated with a margin between different times/spatial locations (according 
 to [this](https://onlinelibrary.wiley.com/doi/10.1111/ecog.02881))
 - [x] Fully document code 
-- [ ] Visualize spatial/temporal correlation in and outside of blocks (this will help decide how much we actually need to "pad" the blocks to remove autocorrelation)
 - [x] Create code for k-folds of blocks (for model validation)
 - [x] Train a Decision Tree (DF) model on the blocks that are not auto-correlated
 - [x] Train a Random Forest (RF) model on the blocks that are not auto-correlated
+- [ ] Visualize spatial/temporal correlation in and outside of blocks (this will help decide how much we actually need to "pad" the blocks to remove autocorrelation)
 - [ ] Visualize in some manner the feature significance learned by the DF\RF 
 
 

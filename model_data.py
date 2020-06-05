@@ -2,8 +2,9 @@ from load_data import make_dataframes, build_tensors, features_labels_split
 from load_data import blocked_folds, reshape_for_optim
 import numpy as np
 from sklearn.linear_model import LinearRegression
-from sklearn.svm import LinearSVR, SVR
+from sklearn.svm import SVR
 from sklearn.tree import DecisionTreeRegressor
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import cross_val_score, cross_validate
 import pickle
 
@@ -75,6 +76,13 @@ scores = cross_val_score(dt, tX, ty, cv=custom_cv(tinds), scoring=rmse)
 print('\nDecision Tree regression validation (RMSE): ')
 print('\t\tMean = {:.7f} +- {:.7f}'.format(np.mean(scores), np.std(scores)))
 print('\t\tMax = {:.7f},  Min = {:.7f}'.format(np.max(scores), np.min(scores)))
+
+# # Random Forest regression
+# rf = RandomForestRegressor()
+# scores = cross_val_score(rf, tX, ty, cv=custom_cv(tinds), scoring=rmse)
+# print('\nRandom Forest regression validation (RMSE): ')
+# print('\t\tMean = {:.7f} +- {:.7f}'.format(np.mean(scores), np.std(scores)))
+# print('\t\tMax = {:.7f},  Min = {:.7f}'.format(np.max(scores), np.min(scores)))
 
 # todo test best model after validation on the held out data
 # todo check how the models are affected by the block sizes and boundaries
