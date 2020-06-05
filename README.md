@@ -1,3 +1,4 @@
+https://github.cs.huji.ac.il/cidr-center/leads/issues/126
 # To Do List 
 - [x] Load image data and organize according to time series
 - [x] Visualize general information about the data - for instance, what is the average change in each of the attributes 
