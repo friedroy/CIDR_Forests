@@ -1,3 +1,4 @@
+https://github.cs.huji.ac.il/cidr-center/leads/issues/126
 # To Do List 
 - [x] Load image data and organize according to time series
 - [x] Visualize general information about the data - for instance, what is the average change in each of the attributes 
@@ -9,6 +10,7 @@ to [this](https://onlinelibrary.wiley.com/doi/10.1111/ecog.02881))
 - [x] Train a Decision Tree (DF) model on the blocks that are not auto-correlated
 - [x] Train a Random Forest (RF) model on the blocks that are not auto-correlated
 - [ ] Visualize spatial/temporal correlation in and outside of blocks (this will help decide how much we actually need to "pad" the blocks to remove autocorrelation)
+    - [ ] Pearson correalation between the features showed that there is a lot of spatial correlation. Instead, I will try to use [Moran's I](https://en.wikipedia.org/wiki/Moran%27s_I#Defining_weights_matrices)
 - [ ] Visualize in some manner the feature significance learned by the DF\RF 
 
 
