@@ -6,18 +6,48 @@ from sklearn.svm import SVR
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import cross_val_score, cross_validate
+import matplotlib.pyplot as plt
 import pickle
+
+
+def rmse(est, X, y):
+    return np.sqrt(np.mean((est.predict(X) - y)**2))
+
+
+rot = 90
+capsize = 3
+scoring = rmse
 
 
 def custom_cv(inds: np.ndarray):
     i = 0
     while i <= np.max(inds):
-        yield np.where(inds == i)[0], np.where(inds == i)[0]
+        yield np.where(inds != i)[0], np.where(inds == i)[0]
         i = i + 1
 
 
-def rmse(est, X, y):
-    return np.sqrt(np.mean((est.predict(X) - y)**2))
+def trees_feature_importance(mdl_list: list, feature_names: list, top_n: int=10):
+    importances = np.mean([t.feature_importances_ for t in mdl_list], axis=0)
+    std = np.std([t.feature_importances_ for t in mdl_list], axis=0)
+    inds = np.argsort(importances)[::-1]
+    plt.figure()
+    plt.title('Decision Tree Feature Importance')
+    plt.bar(np.arange(len(importances))[:top_n], importances[inds][:top_n],
+            yerr=std[inds][:top_n], capsize=capsize, align='center')
+    plt.xticks(np.arange(len(importances))[:top_n], feature_names[:top_n], rotation=rot)
+    plt.show()
+
+
+def forest_feature_importance(mdl_list: list, feature_names: list, top_n: int=10):
+    importances = np.mean([f.feature_importances_ for f in mdl_list], axis=0)
+    std = np.std([t.feature_importances_ for f in mdl_list for t in f.estimators_], axis=0)
+    inds = np.argsort(importances)[::-1]
+    plt.figure()
+    plt.title('Random Forest Feature Importance')
+    plt.bar(np.arange(len(importances))[:top_n], importances[inds][:top_n],
+            yerr=std[inds][:top_n], capsize=capsize, align='center')
+    plt.xticks(np.arange(len(importances))[:top_n], feature_names[:top_n], rotation=rot)
+    plt.show()
 
 
 # load data and create tensors
@@ -39,51 +69,80 @@ with open('att_dicts.pkl', 'rb') as f: ts_dict, st_dict = pickle.load(f)
 
 # create temporal-spatial feature and label tensors
 X, y, names = features_labels_split(ts, st, ts_dict['ndvi'], ts_dict, st_dict, history=1, surrounding=0)
+names = [n.replace('_', ' : ') for n in names]
 # split into blocks
-X, y, inds = blocked_folds(X, y, num_splits=12, spatial_boundary=10, temporal_boundary=1, sp_block_sz=10, t_block_sz=3)
+X, y, inds = blocked_folds(X, y, num_splits=8, spatial_boundary=10, temporal_boundary=1, sp_block_sz=10, t_block_sz=3)
 # flatten into proper feature and label vectors; after this step, the data should be ready for training
 X_fl, y_fl, inds = reshape_for_optim(X, y, inds)
 print('# total samples = {}'.format(len(inds)))
 
-hold_out = (X_fl[inds == np.max(inds)], y_fl[inds == np.max(inds)])
-tX, ty, tinds = X_fl[inds != np.max(inds)], y_fl[inds != np.max(inds)], inds[inds != np.max(inds)]
+# normalize data (essential for SVM and linear regression)
+X_fl = (X_fl - np.min(X_fl, axis=0))/(np.max(X_fl, axis=0) - np.min(X_fl, axis=0))
+
+ho = np.random.choice(len(y_fl), int(np.ceil(.1*len(y_fl))), replace=False)
+hold_out = (X_fl[ho], y_fl[ho])
+
+train_inds = np.ones(len(y_fl)).astype(bool)
+train_inds[ho] = False
+tX, ty, tinds = X_fl[train_inds], y_fl[train_inds], inds[train_inds]
 print('# train samples = {}'.format(len(tinds)))
 print('# test samples = {}'.format(len(hold_out[1])))
+print('# of samples per fold = {}'.format(int(np.mean([len(inds[inds == a]) for a in np.unique(inds)]))))
 
 print('\nMean of true y values: {:.3f} +- {:.3f}'.format(np.mean(ty), np.std(ty)))
 
 # returning the mean as the predicted value (as a baseline)
 scores = np.sqrt(np.mean((np.mean(ty) - ty)**2))
-print('\nReturning mean as prediction (RMSE): {:.3f}'.format(scores))
+print('\nReturning mean as prediction - train RMSE: {:.3f}'.format(scores))
 
 # simple linear regression
 lin = LinearRegression()
-scores = cross_val_score(lin, tX, ty, cv=custom_cv(tinds), scoring=rmse)
+res = cross_validate(lin, tX, ty, cv=custom_cv(tinds), scoring=scoring, return_estimator=True)
+scores, estims = res['test_score'], res['estimator']
 print('\nLinear regression validation (RMSE): ')
 print('\t\tMean = {:.3f} +- {:.3f}'.format(np.mean(scores), np.std(scores)))
 print('\t\tMax = {:.3f},  Min = {:.3f}'.format(np.max(scores), np.min(scores)))
+mdl = estims[np.argmin(scores)]
+print('\t\tWeights for each feature:',
+      [(names[i], np.round(mdl.coef_[i], 2)) for i in np.argsort(mdl.coef_)[::-1]])
+
+
+# linear SVM regression
+lin_svr = SVR(kernel='linear')
+res = cross_validate(lin_svr, tX, ty, cv=custom_cv(tinds), scoring=scoring, return_estimator=True)
+scores, estims = res['test_score'], res['estimator']
+print('\nLinear SVM regression validation (RMSE): ')
+print('\t\tMean = {:.3f} +- {:.3f}'.format(np.mean(scores), np.std(scores)))
+print('\t\tMax = {:.3f},  Min = {:.3f}'.format(np.max(scores), np.min(scores)))
+mdl = estims[np.argmin(scores)]
+print('\t\tWeights for each feature:',
+      [(names[i], np.round(mdl.coef_[0][i], 2)) for i in np.argsort(mdl.coef_[0])[::-1]])
 
 # RBF SVM regression
 rbf_svr = SVR()
-scores = cross_val_score(rbf_svr, tX, ty, cv=custom_cv(tinds), scoring=rmse)
+res = cross_validate(rbf_svr, tX, ty, cv=custom_cv(tinds), scoring=scoring, return_estimator=True)
+scores, _ = res['test_score'], res['estimator']
 print('\nRBF SVM regression validation (RMSE): ')
 print('\t\tMean = {:.3f} +- {:.3f}'.format(np.mean(scores), np.std(scores)))
 print('\t\tMax = {:.3f},  Min = {:.3f}'.format(np.max(scores), np.min(scores)))
 
 # Decision Tree regression
-dt = DecisionTreeRegressor()
-scores = cross_val_score(dt, tX, ty, cv=custom_cv(tinds), scoring=rmse)
+dt = DecisionTreeRegressor(max_depth=5)
+res = cross_validate(dt, tX, ty, cv=custom_cv(tinds), scoring=scoring, return_estimator=True)
+scores, estims = res['test_score'], res['estimator']
 print('\nDecision Tree regression validation (RMSE): ')
 print('\t\tMean = {:.7f} +- {:.7f}'.format(np.mean(scores), np.std(scores)))
 print('\t\tMax = {:.7f},  Min = {:.7f}'.format(np.max(scores), np.min(scores)))
+trees_feature_importance(estims, names)
 
-# # Random Forest regression
-# rf = RandomForestRegressor()
-# scores = cross_val_score(rf, tX, ty, cv=custom_cv(tinds), scoring=rmse)
-# print('\nRandom Forest regression validation (RMSE): ')
-# print('\t\tMean = {:.7f} +- {:.7f}'.format(np.mean(scores), np.std(scores)))
-# print('\t\tMax = {:.7f},  Min = {:.7f}'.format(np.max(scores), np.min(scores)))
+# Random Forest regression
+rf = RandomForestRegressor(n_estimators=10)
+res = cross_validate(rf, tX, ty, cv=custom_cv(tinds), scoring=scoring, return_estimator=True)
+scores, estims = res['test_score'], res['estimator']
+print('\nRandom Forest regression validation (RMSE): ')
+print('\t\tMean = {:.7f} +- {:.7f}'.format(np.mean(scores), np.std(scores)))
+print('\t\tMax = {:.7f},  Min = {:.7f}'.format(np.max(scores), np.min(scores)))
+forest_feature_importance(estims, names)
 
 # todo test best model after validation on the held out data
 # todo check how the models are affected by the block sizes and boundaries
-# todo fix the manner in which the test samples are chosen

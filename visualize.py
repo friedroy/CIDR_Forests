@@ -26,18 +26,23 @@ for i, k in enumerate(list(ts_dict.keys())):
     plt.axis('off')
     plt.title(k)
 
-N = 10
+N = 25
 x = np.random.choice(ts.shape[2], N, replace=False)
 y = np.random.choice(ts.shape[3], N, replace=False)
 t_arr = np.arange(ts.shape[1])
 plt.figure()
 for i, k in enumerate(list(ts_dict.keys())):
     plt.subplot(w, h, i+1)
+    A = ts[ts_dict[k]]
+    A = A[:, ~np.isnan(np.sum(A, axis=0))]
     for j in range(len(x)):
-        arr = ts[ts_dict[k], :, x[j], y[j]]
+        arr = (ts[ts_dict[k], :, x[j], y[j]] - np.min(A))/ \
+              (np.max(A) - np.min(A))
         plt.plot(t_arr[~np.isnan(arr)], arr[~np.isnan(arr)], lw=2)
-    arr = np.mean(ts[ts_dict[k]], axis=(1, 2))
-    arr[np.isnan(arr)] = np.min(arr[~np.isnan(arr)])
+
+    arr = np.mean((A - np.min(A))/ \
+                   (np.max(A) - np.min(A)), axis=(1))
+    # arr[np.isnan(arr)] = np.min(arr[~np.isnan(arr)])
     plt.plot(t_arr, arr, '--k')
     plt.title(k)
 
