@@ -278,6 +278,9 @@ def blocked_folds(X: np.ndarray, y: np.ndarray, num_splits: int = 10, spatial_bo
     X_fold = X[inds >= 0]
     inds = inds[inds >= 0]
     inds = np.floor((num_splits - 1) * (inds / np.max(inds))).astype(int)
+    if len(np.unique(inds)) < num_splits:
+        for i, num in enumerate(np.sort(np.unique(inds))):
+            inds[inds == num] = i
     return X_fold, y_fold, inds
 
 
