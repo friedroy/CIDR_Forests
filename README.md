@@ -47,3 +47,10 @@ to [this](https://onlinelibrary.wiley.com/doi/10.1111/ecog.02881))
 - [x] Train a Decision Tree (DF) model on the blocks that are not auto-correlated
 - [x] Train a Random Forest (RF) model on the blocks that are not auto-correlated
 - [x] Visualize in some manner the feature significance learned by the DF\RF 
+
+
+Links:
+https://en.wikipedia.org/wiki/Autoregressive_integrated_moving_average
+https://en.wikipedia.org/wiki/Kriging
+https://christophm.github.io/interpretable-ml-book/extend-lm.html
+
