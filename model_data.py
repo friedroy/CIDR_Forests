@@ -1,10 +1,10 @@
 from load_data import make_dataframes, build_tensors, features_labels_split
 from load_data import blocked_folds, reshape_for_optim
 import numpy as np
-from sklearn.linear_model import LinearRegression, Lasso, ElasticNet, Ridge, BayesianRidge
+from sklearn.linear_model import LinearRegression, TweedieRegressor
 from sklearn.svm import SVR
 from sklearn.tree import DecisionTreeRegressor
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.model_selection import cross_val_score, cross_validate
 import matplotlib.pyplot as plt
 import pickle
@@ -76,8 +76,8 @@ X, y, inds = blocked_folds(X, y, num_splits=12, spatial_boundary=10, temporal_bo
 X_fl, y_fl, inds = reshape_for_optim(X, y, inds)
 print('# total samples = {}'.format(len(inds)))
 
-# # normalize data (essential for SVM and linear regression)
-# X_fl = (X_fl - np.min(X_fl, axis=0))/(np.max(X_fl, axis=0) - np.min(X_fl, axis=0))
+# normalize data (essential for SVM and linear regression)
+X_fl = (X_fl - np.min(X_fl, axis=0))/(np.max(X_fl, axis=0) - np.min(X_fl, axis=0))
 
 ho = np.random.choice(len(y_fl), int(np.ceil(.1*len(y_fl))), replace=False)
 hold_out = (X_fl[ho], y_fl[ho])
@@ -106,16 +106,13 @@ mdl = estims[np.argmin(scores)]
 print('\t\tWeights for each feature:',
       [(names[i], np.round(mdl.coef_[i], 2)) for i in np.argsort(np.abs(mdl.coef_))[::-1]])
 
-# Bayesian ridge regression
-bay = BayesianRidge(normalize=True)
-res = cross_validate(bay, tX, ty, cv=custom_cv(tinds), scoring=scoring, return_estimator=True)
-scores, estims = res['test_score'], res['estimator']
-print('\nBayesian Ridge regression validation (R2): ')
+# Normal GLM regression
+glmn = TweedieRegressor(power=0, alpha=0)
+res = cross_validate(glmn, tX, ty, cv=custom_cv(tinds), scoring=scoring, return_estimator=True)
+scores, _ = res['test_score'], res['estimator']
+print('\nNormal GLM regression validation (R2): ')
 print('\t\tMean = {:.3f} +- {:.3f}'.format(np.mean(scores), np.std(scores)))
 print('\t\tMax = {:.3f},  Min = {:.3f}'.format(np.max(scores), np.min(scores)))
-mdl = estims[np.argmin(scores)]
-print('\t\tWeights for each feature:',
-      [(names[i], np.round(mdl.coef_[i], 2)) for i in np.argsort(np.abs(mdl.coef_))[::-1]])
 
 # # linear SVM regression
 # lin_svr = SVR(kernel='linear')
@@ -145,11 +142,29 @@ print('\t\tMean = {:.3f} +- {:.3f}'.format(np.mean(scores), np.std(scores)))
 print('\t\tMax = {:.3f},  Min = {:.3f}'.format(np.max(scores), np.min(scores)))
 trees_feature_importance(estims, names)
 
+# Decision Tree Friedman_MSE regression
+dtf = DecisionTreeRegressor(criterion='friedman_mse')
+res = cross_validate(dtf, tX, ty, cv=custom_cv(tinds), scoring=scoring, return_estimator=True)
+scores, estims = res['test_score'], res['estimator']
+print('\nDecision Tree with Friedman MSE regression validation (R2): ')
+print('\t\tMean = {:.3f} +- {:.3f}'.format(np.mean(scores), np.std(scores)))
+print('\t\tMax = {:.3f},  Min = {:.3f}'.format(np.max(scores), np.min(scores)))
+trees_feature_importance(estims, names)
+
 # Random Forest regression
-rf = RandomForestRegressor(n_estimators=10)
+rf = RandomForestRegressor(max_depth=5, n_estimators=15)
 res = cross_validate(rf, tX, ty, cv=custom_cv(tinds), scoring=scoring, return_estimator=True)
 scores, estims = res['test_score'], res['estimator']
 print('\nRandom Forest regression validation (R2): ')
+print('\t\tMean = {:.3f} +- {:.3f}'.format(np.mean(scores), np.std(scores)))
+print('\t\tMax = {:.3f},  Min = {:.3f}'.format(np.max(scores), np.min(scores)))
+forest_feature_importance(estims, names)
+
+# Gradient Boosting regression
+gb = GradientBoostingRegressor(n_estimators=15)
+res = cross_validate(gb, tX, ty, cv=custom_cv(tinds), scoring=scoring, return_estimator=True)
+scores, estims = res['test_score'], res['estimator']
+print('\nGradient Boosting regression validation (R2): ')
 print('\t\tMean = {:.3f} +- {:.3f}'.format(np.mean(scores), np.std(scores)))
 print('\t\tMax = {:.3f},  Min = {:.3f}'.format(np.max(scores), np.min(scores)))
 forest_feature_importance(estims, names)

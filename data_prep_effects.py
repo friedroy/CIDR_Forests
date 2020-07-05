@@ -2,9 +2,7 @@ from load_data import make_dataframes, build_tensors, features_labels_split
 from load_data import blocked_folds, reshape_for_optim
 import numpy as np
 from sklearn.linear_model import LinearRegression
-from sklearn.svm import SVR
 from sklearn.tree import DecisionTreeRegressor
-from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import cross_val_score, cross_validate
 import matplotlib.pyplot as plt
 import pickle
@@ -32,9 +30,9 @@ def bound_effects():
     X, y, names = features_labels_split(ts, st, ts_dict['ndvi'], ts_dict, st_dict, history=1, surrounding=0)
 
     scoring = 'r2'
-    sb_vals = [0, 5, 10, 25, 50]
+    sb_vals = [0, 10, 25, 50]
     tb_vals = [0, 1, 2, 3]
-    sblk_vals = [5, 10, 25, 50, 100]
+    sblk_vals = [5, 10, 25, 50]
     tblk_vals = [1, 2, 3]
     # sb_vals = [0, 1]
     # tb_vals = [0, 1]
@@ -57,10 +55,11 @@ def bound_effects():
                     print('# total samples = {}'.format(len(inds)))
                     print('# of samples per fold = {}'.format(
                         int(np.mean([len(inds[inds == a]) for a in np.unique(inds)]))))
-                    chs = np.random.choice(X_fl.shape[0], min(X_fl.shape[0], 10000), replace=False)
+                    chs = np.random.choice(X_fl.shape[0], min(X_fl.shape[0], 50000), replace=False)
                     X_fl, y_fl, inds = X_fl[chs], y_fl[chs], inds[chs]
                     # Decision Tree regression
                     dt = DecisionTreeRegressor(max_depth=5)
+                    # dt = LinearRegression(normalize=True)
                     res = cross_validate(dt, X_fl, y_fl, cv=custom_cv(inds), scoring=scoring, return_estimator=False,
                                          return_train_score=True)
                     tscores, scores = res['train_score'], res['test_score']
@@ -165,4 +164,4 @@ def feature_effects():
     plt.show()
 
 
-bound_effects()
+feature_effects()

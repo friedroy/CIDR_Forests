@@ -2,18 +2,9 @@ https://github.cs.huji.ac.il/cidr-center/leads/issues/126
 # To Do List 
 - [ ] Visualize spatial/temporal correlation in and outside of blocks (this will help decide how much we actually need to "pad" the blocks to remove autocorrelation)
     - [ ] Pearson correlation between the features showed that there is a lot of spatial correlation. Instead, I will try to use [Moran's I](https://en.wikipedia.org/wiki/Moran%27s_I#Defining_weights_matrices)
-- [x] Check how the train/test score of the models is affected by adding more history/spatial information
-- [x] Check how the train/test score of the models is affected by choosing different boundary and block sizes - it could that small boundaries/small blocks negatively affect the models
-- [x] Load image data and organize according to time series
-- [x] Visualize general information about the data - for instance, what is the average change in each of the attributes 
-as a function of time (this will give us a general idea of how the data "feels")
-- [x] Create k-fold blocks separated with a margin between different times/spatial locations (according 
-to [this](https://onlinelibrary.wiley.com/doi/10.1111/ecog.02881))
-- [x] Fully document code 
-- [x] Create code for k-folds of blocks (for model validation)
-- [x] Train a Decision Tree (DF) model on the blocks that are not auto-correlated
-- [x] Train a Random Forest (RF) model on the blocks that are not auto-correlated
-- [x] Visualize in some manner the feature significance learned by the DF\RF 
+- [ ] Hyper-parameter search for Decision Trees/Random Forests to reduce overfitting
+- [ ] Look into using LIME/SHAP values for interpretability of less classical models
+
 
 
 # Pipeline Breakdown
@@ -42,3 +33,17 @@ later down the line
 
 
 *Although this seems like quite a lot of steps, note that steps 1-6 are already finished...*  
+
+### Finished (old) tasks from the To Do List 
+- [x] Check how the train/test score of the models is affected by adding more history/spatial information
+- [x] Check how the train/test score of the models is affected by choosing different boundary and block sizes - it could that small boundaries/small blocks negatively affect the models
+- [x] Load image data and organize according to time series
+- [x] Visualize general information about the data - for instance, what is the average change in each of the attributes 
+as a function of time (this will give us a general idea of how the data "feels")
+- [x] Create k-fold blocks separated with a margin between different times/spatial locations (according 
+to [this](https://onlinelibrary.wiley.com/doi/10.1111/ecog.02881))
+- [x] Fully document code 
+- [x] Create code for k-folds of blocks (for model validation)
+- [x] Train a Decision Tree (DF) model on the blocks that are not auto-correlated
+- [x] Train a Random Forest (RF) model on the blocks that are not auto-correlated
+- [x] Visualize in some manner the feature significance learned by the DF\RF 
