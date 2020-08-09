@@ -82,10 +82,8 @@ def tensor_to_features(tensor: np.ndarray, feat2ind: dict, att: str='ndvi', look
     for i in range(y.shape[1]): X[:, i] = tensor[:, i:i+lookback]
     if remove_att is not None:
         for a in remove_att: X = np.delete(X, feat2ind[a], axis=3)
-    y = y.T.reshape(-1)
-    # y = y.reshape(-1)
-    X = X.transpose((1, 0, 2, 3)).reshape(len(y), -1)
-    # X = X.reshape(len(y), -1)
+    y = y.reshape(-1)
+    X = X.reshape(-1, np.prod(X.shape[2:]))
     if feat_names:
         ind2feat = {i: a for (a, i) in zip(list(feat2ind.keys()), list(feat2ind.values()))}
         names = [[(ind2feat[i] + '_-{}y'.format(t+1) if lookback > 1 else ind2feat[i])
