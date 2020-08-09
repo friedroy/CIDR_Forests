@@ -1,8 +1,6 @@
 https://github.cs.huji.ac.il/cidr-center/leads/issues/126
 # To Do List 
-- [ ] Visualize spatial/temporal correlation in and outside of blocks (this will help decide how much we actually need to "pad" the blocks to remove autocorrelation)
-    - [ ] Pearson correlation between the features showed that there is a lot of spatial correlation. Instead, I will try to use [Moran's I](https://en.wikipedia.org/wiki/Moran%27s_I#Defining_weights_matrices)
-- [ ] Hyper-parameter search for Decision Trees/Random Forests to reduce overfitting
+- [ ] Changing the order of the features before the flatten (load_data.py, line 85-86) drastically changes performance - so that's probably a bug I need to fix
 - [ ] Look into using LIME/SHAP values for interpretability of less classical models
 
 
