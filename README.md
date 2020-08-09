@@ -51,4 +51,5 @@ Links:
 https://en.wikipedia.org/wiki/Autoregressive_integrated_moving_average
 https://en.wikipedia.org/wiki/Kriging
 https://christophm.github.io/interpretable-ml-book/extend-lm.html
+https://towardsdatascience.com/time-series-modeling-using-scikit-pandas-and-numpy-682e3b8db8d1
 
