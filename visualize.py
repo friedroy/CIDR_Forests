@@ -1,79 +1,32 @@
+from load_data import load_csv_tensor, tensor_to_features
 import numpy as np
-import matplotlib.pyplot as plt
-import pickle
-from load_data import features_labels_split
+from matplotlib import pyplot as plt
 
-ts = np.load('timeseries_tensor.npy')
-st = np.load('static_tensor.npy')
-with open('att_dicts.pkl', 'rb') as f: ts_dict, st_dict = pickle.load(f)
-t = 0
+tens, f2i, _, years = load_csv_tensor('data/test2.csv', stats=['aspect', 'slope', 'lon', 'lat'])
+X, y, features = tensor_to_features(tens, f2i, lookback=1, remove_att=['swe'])
 
+X = (X - np.min(X, axis=0)[None, :])/(np.max(X, axis=0)-np.min(X, axis=0))[None, :]
+y = (y - np.min(y))/(np.max(y)-np.min(y))
 
-def pearson(x: np.ndarray, y: np.ndarray):
-    norm = np.sqrt(np.sum((x-np.mean(x))**2))*np.sqrt(np.sum((y-np.mean(y))**2))
-    return np.sum(((x - np.mean(x))*(y - np.mean(y))))/norm
+for i, f in enumerate(features):
+    inds = np.random.choice(X.shape[0], int(.05*X.shape[0]), replace=False)
+    c = np.corrcoef(X[:, i], y)
+    plt.figure()
+    plt.title('correlation={:.3f}'.format(c[0, 1]))
+    plt.scatter(X[inds, i], y[inds], 10, alpha=.5)
+    plt.plot([0, 1], [0, 1], '--k', lw=2)
+    plt.xlabel(f)
+    plt.ylabel('ndvi future')
+    plt.xlim([0, 1])
+    plt.ylim([0, 1])
+plt.show()
 
-
-# simple plot to show all aggregated features as an image
-h, w = 2, 5
-plt.figure(dpi=300)
-for i, k in enumerate(list(ts_dict.keys())):
-    plt.subplot(h, w, i+1)
-    im = ts[ts_dict[k], t]
-    im[np.isnan(im)] = np.min(im[~np.isnan(im)])
-    im = (im - np.min(im))/(np.max(im) - np.min(im))
-    plt.imshow(im, cmap='gray')
-    plt.axis('off')
-    plt.title(k)
-
-N = 25
-x = np.random.choice(ts.shape[2], N, replace=False)
-y = np.random.choice(ts.shape[3], N, replace=False)
-t_arr = np.arange(ts.shape[1])
-plt.figure()
-for i, k in enumerate(list(ts_dict.keys())):
-    plt.subplot(w, h, i+1)
-    A = ts[ts_dict[k]]
-    A = A[:, ~np.isnan(np.sum(A, axis=0))]
-    for j in range(len(x)):
-        arr = (ts[ts_dict[k], :, x[j], y[j]] - np.min(A))/ \
-              (np.max(A) - np.min(A))
-        plt.plot(t_arr[~np.isnan(arr)], arr[~np.isnan(arr)], lw=2)
-
-    arr = np.mean((A - np.min(A))/ \
-                   (np.max(A) - np.min(A)), axis=(1))
-    # arr[np.isnan(arr)] = np.min(arr[~np.isnan(arr)])
-    plt.plot(t_arr, arr, '--k')
-    plt.title(k)
-
-
-# plot of static features as full images
-plt.figure(dpi=300)
-for i, k in enumerate(list(st_dict.keys())):
-    plt.subplot(1, 3, i+1)
-    im = st[st_dict[k]]
-    im[np.isnan(im)] = np.min(im[~np.isnan(im)])
-    im = (im - np.min(im))/(np.max(im) - np.min(im))
-    plt.imshow(im, cmap='gray')
-    plt.axis('off')
-    plt.title(k)
-
-
-X, y, names = features_labels_split(ts, st, ts_dict['ndvi'], ts_dict, st_dict, history=1, surrounding=0)
-mat = X[t]
-mat[np.isnan(mat)] = np.mean(mat[~np.isnan(mat)])
-
-# pearson correlation between each pixel and the middle pixel
-p = mat[mat.shape[0]//2, mat.shape[1]//2]
-print(mat.shape[0]//2, mat.shape[1]//2)
-corr = np.zeros(mat.shape[:2])
-for i in range(mat.shape[0]):
-    for j in range(mat.shape[1]):
-        corr[i, j] = pearson(p, mat[i, j])
-plt.figure()
-plt.imshow(corr)
-plt.colorbar()
-
-# todo use Moran's I between the blocks to calculate correlation between the blocks
-
+for i, f in enumerate(features):
+    inds = np.random.choice(tens.shape[0], 25, replace=False)
+    plt.figure()
+    for j in inds:
+        plt.plot(years, tens[j, :, f2i[f]], lw=.5)
+    plt.plot(years, np.mean(tens[:, :, f2i[f]], axis=0), 'k', lw=2)
+    plt.xlabel('years')
+    plt.ylabel(f)
 plt.show()
