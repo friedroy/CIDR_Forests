@@ -2,8 +2,9 @@ from load_data import load_csv_tensor, tensor_to_features
 import numpy as np
 from matplotlib import pyplot as plt
 
-tens, f2i, _, years = load_csv_tensor('data/test2.csv', stats=['aspect', 'slope', 'lon', 'lat'])
-X, y, features = tensor_to_features(tens, f2i, lookback=1, remove_att=['swe'])
+# tens, f2i, _, years = load_csv_tensor('data/test2.csv', stats=['aspect', 'slope', 'lon', 'lat'])
+tens, f2i, _, years = load_csv_tensor('data/test2.csv', stats=['slope'])
+X, y, features = tensor_to_features(tens, f2i, lookback=1, remove_att=['swe', 'pdsi', 'pet'])
 
 X = (X - np.min(X, axis=0)[None, :])/(np.max(X, axis=0)-np.min(X, axis=0))[None, :]
 y = (y - np.min(y))/(np.max(y)-np.min(y))

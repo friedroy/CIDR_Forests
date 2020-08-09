@@ -14,8 +14,8 @@ ho_rat = .5
 
 tens, f2i, _, years = load_csv_tensor('data/test2.csv', stats=['aspect', 'slope'])
 X, y, features = tensor_to_features(tens, f2i, lookback=1, remove_att=['swe', 'pdsi', 'pet'])
-X = (X - np.mean(X, axis=0)[None, :])/np.std(X, axis=0)[None, :]
-y = (y - np.mean(y))/np.std(y)
+# X = (X - np.mean(X, axis=0)[None, :])/np.std(X, axis=0)[None, :]
+# y = (y - np.mean(y))/np.std(y)
 
 ho = np.random.choice(len(y), int(np.ceil(ho_rat*len(y))), replace=False)
 hold_out = (X[ho], y[ho])
@@ -36,7 +36,7 @@ models = [
     # ('LinSVR', SVR(kernel='linear')),
     # ('RBF-SVR', SVR(kernel='rbf')),
     ('DT', DecisionTreeRegressor(max_depth=5)),
-    ('RF', RandomForestRegressor(max_depth=5, n_estimators=50)),
+    # ('RF', RandomForestRegressor(max_depth=5, n_estimators=50)),
     # ('XGB', GradientBoostingRegressor(n_estimators=50)),
     # ('KNN', KNeighborsRegressor()),
 ]
@@ -45,7 +45,7 @@ print('RSquared scores:')
 res, names = [], []
 for name, model in models:
     tscv = TimeSeriesSplit(n_splits=len(years)-1, max_train_size=int(.33*tX.shape[0]))
-    cv_results = cross_validate(model, tX, ty, cv=tscv, scoring='r2')
+    cv_results = cross_validate(model, X, y, cv=n_folds, scoring='r2')
     res.append(cv_results['test_score'])
     names.append(name)
     print('\t{}: {:.3f} ± {:.3f}'.format(name, cv_results['test_score'].mean(), cv_results['test_score'].std()),
