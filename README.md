@@ -1,8 +1,8 @@
 https://github.cs.huji.ac.il/cidr-center/leads/issues/126
 # To Do List 
-- [ ] Rewrite feature importance for the DTs and RFs
-- [ ] Since there are a lot of features, we should probably use permutation tests for feature importance in the DTs and RFs
 - [ ] Look into using LIME/SHAP values for interpretability of less classical models
+- [x] Since there are a lot of features, we should probably use permutation tests for feature importance in the DTs and RFs
+- [x] Rewrite feature importance for the DTs and RFs
 - [x] Remove duplicates of static features when creating the (X, y) training pair (duplicates are created for each lookback year)
 
 
