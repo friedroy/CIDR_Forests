@@ -1,7 +1,9 @@
 https://github.cs.huji.ac.il/cidr-center/leads/issues/126
 # To Do List 
-- [ ] Changing the order of the features before the flatten (load_data.py, line 85-86) drastically changes performance - so that's probably a bug I need to fix
+- [ ] Rewrite feature importance for the DTs and RFs
+- [ ] Since there are a lot of features, we should probably use permutation tests for feature importance in the DTs and RFs
 - [ ] Look into using LIME/SHAP values for interpretability of less classical models
+- [x] Remove duplicates of static features when creating the (X, y) training pair (duplicates are created for each lookback year)
 
 
 
@@ -45,6 +47,8 @@ to [this](https://onlinelibrary.wiley.com/doi/10.1111/ecog.02881))
 - [x] Train a Decision Tree (DF) model on the blocks that are not auto-correlated
 - [x] Train a Random Forest (RF) model on the blocks that are not auto-correlated
 - [x] Visualize in some manner the feature significance learned by the DF\RF 
+- [x] Changing the order of the features before the flatten (load_data.py, line 85-86) drastically changes performance - so that's probably a bug I need to fix
+
 
 
 Links:
