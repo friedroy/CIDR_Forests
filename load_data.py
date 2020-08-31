@@ -79,13 +79,14 @@ def load_csv(path: str='data/train.csv', remove_atts: list=tuple()):
 
 
 def load_csv_tensor(path: str='data/train.csv', stats: list=('aspect', 'slope'), return_years: bool=False,
-                    remove_atts: list=tuple(['swe'])):
+                    remove_atts: list=tuple(['swe']), return_coors: bool=False):
     """
     Load a data tensor corresponding to the supplied CSV
     :param path: the path to the data .csv file
     :param stats: which static features to extract and add to the tensor from the csv
     :param return_years: a boolean indicating whether to return the years the data points where measured at
     :param remove_atts: a (possibly empty) list of attributes that should be dropped
+    :param return_coors: a boolearn indicating whether to return the coordinates of the data points
     :return: a numpy array with shape (N, T, d) where N is the number of data points, T is the number of years
              and d is the number of features for each point
              a dictionary mapping from feature names to indices in the last dimension of the tensor
@@ -111,25 +112,41 @@ def load_csv_tensor(path: str='data/train.csv', stats: list=('aspect', 'slope'),
 
 
 def tensor_to_features(tensor: np.ndarray, feat2ind: dict, att: str='ndvi', lookback: int=1, feat_names: bool=True,
-                       remove_att: bool=True):
+                       remove_att: bool=True, return_years: bool=False):
+    """
+    Reshape the tensor into feature and output vectors (the corresponding X and y in ML)
+    :param tensor: the sample-date-feature tensor created by load_csv_tensor
+    :param feat2ind: a dictionary mapping from feature names to indexes
+    :param att: the attribute that should be predicted by the models that will be trained
+    :param lookback: the number of previous years the model can see for the prediction
+    :param feat_names: a boolearn indicating whether the feature names should be returned or not
+    :param remove_att: whether to remove the attribute that is to be predicted from the feature vector (as in the one
+                       from a year before the prediction that should be made)
+    :param return_years: a boolean indicating whether to return a list of the years of each of the samples or not
+    :return: X, a (# samples, # features) ndarray, and y, a (# samples, ) ndarray
+    """
     assert lookback >= 1, 'Number of look-back years must be larger than 0'
     X, y = [], []
     tinds = [i for (f, i) in zip(list(feat2ind.keys()), list(feat2ind.values())) if f not in stat_feats and
              not (f == att and remove_att)]
     sinds = [i for (f, i) in zip(list(feat2ind.keys()), list(feat2ind.values())) if f in stat_feats]
+    years = []
     for i in range(tensor.shape[1]-lookback-1):
         vecs = tensor[:, i:i+lookback, tinds].reshape((tensor.shape[0], lookback*len(tinds)))
         X.append(np.concatenate([vecs, tensor[:, i+lookback, sinds]], axis=1))
         y.append(tensor[:, i+lookback+1, feat2ind[att]])
+        years.append(np.ones(len(y[-1]))*i)
     X, y = np.array(X), np.array(y)
     X, y = X.reshape(-1, X.shape[-1]), y.reshape(-1)
+    years = np.array(years).reshape(-1)
     if feat_names:
         ind2feat = {i: a for (a, i) in zip(list(feat2ind.keys()), list(feat2ind.values()))}
         tnames = [[(ind2feat[i] + '_{}y'.format(-lookback+t) if lookback > 1 else ind2feat[i]) for i in tinds]
                   for t in range(lookback)]
         names = list(np.array(tnames).flatten()) + [ind2feat[i] for i in sinds]
-
+        if return_years: return X, y, names, years
         return X, y, names
+    if return_years: return X, y, years
     return X, y
 
 
