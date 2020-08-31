@@ -6,8 +6,17 @@ https://github.cs.huji.ac.il/cidr-center/leads/issues/126
 - [x] Remove duplicates of static features when creating the (X, y) training pair (duplicates are created for each lookback year)
 
 
-
 # Pipeline Breakdown
+The suggested pipeline for learning the time series can be broken down into the following stages:
+1. The data is now saved as a big CSV with rows as data points and columns for different features at different dates. The first part of the pipeline is to read this CSV and convert it into a format that is slightly easier to use. I loaded the CSV into a big tensor of shape (# data points, # years, # features + ndvi), where the months of the different features were aggregated according to [our previously chosen aggregation functions](https://docs.google.com/spreadsheets/d/188OjODdWSf7AR1he4f3eu2v0kSG8JEa1_swgaAjGCxQ/edit#gid=0)). Since the new data points are not on a regular spatial grid, we chose not to use the coordinates for now, which may change in the future
+2. After loading this tensor, we have to reshape it to accomodate typical SKLearn models. Since we are trying to see what features affect the ndvi, I chose not to add the previous years ndvi to the features the model sees, as it is most correlated with the current year's ndvi (but this can be easily changed). In addition, I added a feature to add more years into the history the model sees for it's prediction. After this stage, the machine learning `X` and `y` equivalents are built
+3. Validation options:
+    1. Since we are not taking into account the spatial coordinates, the first cross-validation technique I used was to train on previous years and test on the next year each time (this is essentially what the time series is trying to achieve); this is basically the [Time Series Split cross validation technique provided by SKlearn](https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TimeSeriesSplit.html)
+    2. The problem with the above split is that what we are trying to show is not to predict the ndvi the following year but rather to generalize to new points. A better way to handle this is by breaking the data into spatio-temporal blocks, then using typical k-folds validation on different blocks (that are somewhat separated from each other). I will add this method of validation to the code, as it is probably better
+4. After choosing the model, we would like to extract feature importances from it. We can do this to any model using either simple [permutation tests](https://scikit-learn.org/stable/modules/permutation_importance.html), which are simple but effective, or the more complicated [SHAP values](https://christophm.github.io/interpretable-ml-book/shap.html), which are more accurate and we can check how the features push the model output
+
+
+# Image Based (Old) Pipeline Breakdown
 The suggested pipeline for learning the time series can be broken down into the following stages:
 1. Read the time series as well as the constant data into two different ```pandas.DataFrame```s; the time series is 
 stored in ```df``` and the fixed data is stored in ```fdf```
@@ -29,10 +38,7 @@ later down the line
     1. Separating these blocks into _k_ folds for model validation while leaving out a portion for test data
     2. Choosing a model using validation on the _k_ folds
     3. Training on full training data and testing on the left out samples
-8. Extracting feature importance from the trained model and visualizing this information
-
-
-*Although this seems like quite a lot of steps, note that steps 1-6 are already finished...*  
+8. Extracting feature importance from the trained model and visualizing this information  
 
 ### Finished (old) tasks from the To Do List 
 - [x] Check how the train/test score of the models is affected by adding more history/spatial information
