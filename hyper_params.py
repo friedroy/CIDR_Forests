@@ -18,7 +18,6 @@ models = [
 res = np.zeros((len(lookback), len(models), n_folds))
 for i, l in enumerate(lookback):
     tens, f2i, _, years= load_csv_tensor('data/test2.csv', stats=['aspect', 'slope', 'lat', 'lon'], return_years=True)
-    # tens, f2i, _, years = load_csv_tensor('data/test2.csv', stats=[], return_years=True)
     X, y, features = tensor_to_features(tens, f2i, lookback=l, remove_att=True)
     print('{} lookback years, {} samples, {} feats:'.format(l, X.shape[0], X.shape[1]))
     for j, (name, model) in enumerate(models):
