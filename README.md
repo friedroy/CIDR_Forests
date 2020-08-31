@@ -1,6 +1,10 @@
 https://github.cs.huji.ac.il/cidr-center/leads/issues/126
 # To Do List 
-- [ ] Look into using LIME/SHAP values for interpretability of less classical models
+- [ ] Train and validate different models on full data (both standard CV and blocked CV)
+- [ ] Validate different amounts of history given to the models (both standard CV and blocked)
+- [ ] Model hyper parameter search
+- [ ] Add spatial blocking option
+- [x] Look into using LIME/SHAP values for interpretability of less classical models
 - [x] Since there are a lot of features, we should probably use permutation tests for feature importance in the DTs and RFs
 - [x] Rewrite feature importance for the DTs and RFs
 - [x] Remove duplicates of static features when creating the (X, y) training pair (duplicates are created for each lookback year)
