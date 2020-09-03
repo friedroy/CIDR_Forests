@@ -3,6 +3,7 @@ https://github.cs.huji.ac.il/cidr-center/leads/issues/126
 - [ ] When testing in feature importance, test on unseen times, not random points
 - [ ] Try adding ndvi to past features/predict change in ndvi (for average of past k years)/use autoregression and try to predict the residuals instead of the features of the ndvi exactly
 - [ ] Add statistics of past years as features - possible packages for this are featuretools and tsfresh
+- [ ] Try using GAMs to model the data
 - [ ] Look at the model residuals for each of the validation models. Also look at a graph of the prediction vs. residuals; i.e. check what makes the model fail and where
 - [ ] For each model make a graph of prediction score vs. year to see if there are specific years where they fail
 - [ ] Validate different amounts of history given to the models (both standard CV and blocked)
