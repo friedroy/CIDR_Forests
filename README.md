@@ -1,9 +1,10 @@
 https://github.cs.huji.ac.il/cidr-center/leads/issues/126
-# To Do List 
-- [ ] Train and validate different models on full data (both standard CV and blocked CV)
+# To Do List
+- [ ] When testing in feature importance, test on unseen times, not random points 
 - [ ] Validate different amounts of history given to the models (both standard CV and blocked)
 - [ ] Model hyper parameter search
 - [ ] Add spatial blocking option
+- [x] Train and validate different models on full data (both standard CV and blocked CV)
 - [x] Look into using LIME/SHAP values for interpretability of less classical models
 - [x] Since there are a lot of features, we should probably use permutation tests for feature importance in the DTs and RFs
 - [x] Rewrite feature importance for the DTs and RFs
