@@ -79,7 +79,7 @@ def load_csv(path: str='data/train.csv', remove_atts: list=tuple()):
 
 
 def load_csv_tensor(path: str='data/train.csv', stats: list=('aspect', 'slope'), return_years: bool=False,
-                    remove_atts: list=tuple(['swe']), return_coors: bool=False):
+                    remove_atts: list=tuple(['swe'])):
     """
     Load a data tensor corresponding to the supplied CSV
     :param path: the path to the data .csv file
@@ -148,6 +148,11 @@ def tensor_to_features(tensor: np.ndarray, feat2ind: dict, att: str='ndvi', look
         return X, y, names
     if return_years: return X, y, years
     return X, y
+
+
+def load_learnable(remove_att: bool=True, return_dates: bool=True):
+    tens, f2i, _, years = load_csv_tensor('data/train.csv', stats=['aspect', 'slope'], return_years=True)
+    return tensor_to_features(tens, f2i, lookback=1, remove_att=remove_att, return_years=return_dates)
 
 
 if __name__ == '__main__':
