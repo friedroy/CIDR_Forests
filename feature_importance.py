@@ -8,10 +8,15 @@ save_p = 'visuals/feature_importance/'
 Path(save_p).mkdir(exist_ok=True, parents=True)
 
 
-def perm_feature_importance(X, y, features, models: list, n_perms: int=100):
+def perm_feature_importance(train: tuple, test: tuple, features, models: list, n_perms: int=100):
+    X, y = train
+    X_val, y_val = test
+    trained = []
     for (name, model) in models:
-        print('{}: test score {:.3f}'.format(name, model.score(X, y)))
-        res = permutation_importance(model, X, y, n_repeats=n_perms)
+        mdl = model.fit(X, y)
+        trained.append((name, mdl))
+        print('{}: train score {:.3f}, test score {:.3f}'.format(name, mdl.score(X, y), mdl.score(X_val, y_val)))
+        res = permutation_importance(model, X_val, y_val, n_repeats=n_perms)
         means = []
         stds = []
         for i in range(len(features)):
@@ -27,3 +32,4 @@ def perm_feature_importance(X, y, features, models: list, n_perms: int=100):
         plt.xlabel('perm. feature importance')
         plt.savefig(save_p + '{}_fi.png'.format(name))
         plt.show()
+    return trained
