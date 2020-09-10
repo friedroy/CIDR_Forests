@@ -38,7 +38,6 @@ def cross_val(models, X, y, cv, name):
 
 
 def validate_models(X, y, times, models: list, val_type='tscv'):
-    print('# samples = {}'.format(X.shape[0]))
     print('# train samples = {}'.format(X.shape[0]))
 
     print('\nMean of true y values: {:.3f} ± {:.3f}'.format(np.mean(y), np.std(y)))
