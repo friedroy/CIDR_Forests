@@ -112,7 +112,7 @@ def load_csv_tensor(path: str='data/train.csv', stats: list=('aspect', 'slope'),
 
 
 def tensor_to_features(tensor: np.ndarray, feat2ind: dict, att: str='ndvi', lookback: int=1, feat_names: bool=True,
-                       remove_att: bool=True, return_years: bool=False):
+                       remove_att: bool=True, return_years: bool=False, difference: int=False):
     """
     Reshape the tensor into feature and output vectors (the corresponding X and y in ML)
     :param tensor: the sample-date-feature tensor created by load_csv_tensor
@@ -123,6 +123,7 @@ def tensor_to_features(tensor: np.ndarray, feat2ind: dict, att: str='ndvi', look
     :param remove_att: whether to remove the attribute that is to be predicted from the feature vector (as in the one
                        from a year before the prediction that should be made)
     :param return_years: a boolean indicating whether to return a list of the years of each of the samples or not
+    :param difference: make predictions the difference with the previous year instead of the ndvi directly
     :return: X, a (# samples, # features) ndarray, and y, a (# samples, ) ndarray
     """
     assert lookback >= 1, 'Number of look-back years must be larger than 0'
@@ -134,7 +135,8 @@ def tensor_to_features(tensor: np.ndarray, feat2ind: dict, att: str='ndvi', look
     for i in range(tensor.shape[1]-lookback-1):
         vecs = tensor[:, i:i+lookback, tinds].reshape((tensor.shape[0], lookback*len(tinds)))
         X.append(np.concatenate([vecs, tensor[:, i+lookback, sinds]], axis=1))
-        y.append(tensor[:, i+lookback+1, feat2ind[att]])
+        if not difference: y.append(tensor[:, i+lookback+1, feat2ind[att]])
+        else: y.append(tensor[:, i+lookback+1, feat2ind[att]] - tensor[:, i+lookback, feat2ind[att]])
         years.append(np.ones(len(y[-1]))*i)
     X, y = np.array(X), np.array(y)
     X, y = X.reshape(-1, X.shape[-1]), y.reshape(-1)
@@ -150,9 +152,10 @@ def tensor_to_features(tensor: np.ndarray, feat2ind: dict, att: str='ndvi', look
     return X, y
 
 
-def load_learnable(remove_att: bool=True, return_dates: bool=True):
+def load_learnable(remove_att: bool=True, return_dates: bool=True, difference: bool=False):
     tens, f2i, _, years = load_csv_tensor('data/train.csv', stats=['aspect', 'slope'], return_years=True)
-    return tensor_to_features(tens, f2i, lookback=1, remove_att=remove_att, return_years=return_dates)
+    return tensor_to_features(tens, f2i, lookback=1, remove_att=remove_att, return_years=return_dates,
+                              difference=difference)
 
 
 if __name__ == '__main__':
@@ -163,8 +166,17 @@ if __name__ == '__main__':
     # print(len(dates), len(years))
     # print(att2in)
     t, f2i, i2f = load_csv_tensor()
-    print(f2i)
-    print(t.shape)
-    X, y, n = tensor_to_features(t, f2i, lookback=2, remove_att=True)
-    print(n)
-    print(X.shape)
+    # print(f2i)
+    # print(t.shape)
+    # X, y, n = tensor_to_features(t, f2i, lookback=2, remove_att=True)
+    # print(n)
+    # print(X.shape)
+    ndvi = t[:, :, f2i['ndvi']]
+    w = 1
+    ndvi = ndvi[:, w:] - np.array([np.mean(ndvi[:, i:i+w], axis=1) for i in range(0, ndvi.shape[1]-w)]).T
+    print(ndvi.shape)
+    import matplotlib.pyplot as plt
+    plt.figure()
+    plt.plot(ndvi[:10].T)
+    plt.plot(np.mean(ndvi, axis=0), 'k', lw=2)
+    plt.show()

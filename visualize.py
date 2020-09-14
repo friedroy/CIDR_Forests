@@ -9,7 +9,7 @@ Path(save_p).mkdir(exist_ok=True, parents=True)
 # tens, f2i, _, years = load_csv_tensor('data/train.csv', stats=['aspect', 'slope', 'lon', 'lat'])
 tens, f2i, _, years = load_csv_tensor('data/train.csv', stats=['aspect', 'slope'], return_years=True,
                                       remove_atts=['swe'])
-X, y, features = tensor_to_features(tens, f2i, lookback=1, remove_att=True)
+X, y, features = tensor_to_features(tens, f2i, lookback=1, remove_att=False, difference=True)
 
 nX = (X - np.min(X, axis=0)[None, :])/(np.max(X, axis=0)-np.min(X, axis=0))[None, :]
 ny = (y - np.min(y))/(np.max(y)-np.min(y))
@@ -24,7 +24,7 @@ for i, f in enumerate(features):
     plt.scatter(nX[inds, i], ny[inds], 10, alpha=.5)
     plt.plot([0, 1], [0, 1], '--k', lw=2)
     plt.xlabel(f)
-    plt.ylabel('ndvi future')
+    plt.ylabel('ndvi delta')
     plt.xlim([0, 1])
     plt.ylim([0, 1])
     plt.savefig(save_p + f + '_ndvicorr.png')
@@ -35,7 +35,7 @@ corrs = np.array(corrs)[inds]
 names = np.array(features)[inds]
 plt.figure()
 plt.bar(np.arange(len(inds)), corrs)
-plt.ylabel('correlation with ndvi')
+plt.ylabel('correlation with ndvi delta')
 plt.xticks(np.arange(len(inds)), names, rotation=45)
 plt.savefig(save_p + 'ndvicorr_bars.png')
 plt.show()
