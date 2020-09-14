@@ -152,9 +152,9 @@ def tensor_to_features(tensor: np.ndarray, feat2ind: dict, att: str='ndvi', look
     return X, y
 
 
-def load_learnable(remove_att: bool=True, return_dates: bool=True, difference: bool=False):
+def load_learnable(remove_att: bool=True, return_dates: bool=True, difference: bool=False, lookback: int=1):
     tens, f2i, _, years = load_csv_tensor('data/train.csv', stats=['aspect', 'slope'], return_years=True)
-    return tensor_to_features(tens, f2i, lookback=1, remove_att=remove_att, return_years=return_dates,
+    return tensor_to_features(tens, f2i, lookback=lookback, remove_att=remove_att, return_years=return_dates,
                               difference=difference)
 
 
