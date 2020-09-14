@@ -128,7 +128,8 @@ def tensor_to_features(tensor: np.ndarray, feat2ind: dict, att: str='ndvi', look
     """
     assert lookback >= 1, 'Number of look-back years must be larger than 0'
     if difference:
-        delta = tensor[:, 1:, feat2ind[att]] - tensor[:, :-1, feat2ind[att]]
+        delta = tensor[:, :, feat2ind[att]] - np.mean(tensor[:, :, feat2ind[att]], axis=0)[None, :]
+        delta = delta[:, 1:] - delta[:, :-1]
         tensor = np.concatenate([tensor[:, 1:], delta[:, :, None]], axis=-1)
         feat2ind['delta'] = tensor.shape[2]-1
         att = 'delta'
