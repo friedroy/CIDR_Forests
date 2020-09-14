@@ -127,6 +127,12 @@ def tensor_to_features(tensor: np.ndarray, feat2ind: dict, att: str='ndvi', look
     :return: X, a (# samples, # features) ndarray, and y, a (# samples, ) ndarray
     """
     assert lookback >= 1, 'Number of look-back years must be larger than 0'
+    if difference:
+        delta = tensor[:, 1:, feat2ind[att]] - tensor[:, :-1, feat2ind[att]]
+        tensor = np.concatenate([tensor[:, 1:], delta[:, :, None]], axis=-1)
+        feat2ind['delta'] = tensor.shape[2]-1
+        att = 'delta'
+
     X, y = [], []
     tinds = [i for (f, i) in zip(list(feat2ind.keys()), list(feat2ind.values())) if f not in stat_feats and
              not (f == att and remove_att)]
@@ -135,8 +141,7 @@ def tensor_to_features(tensor: np.ndarray, feat2ind: dict, att: str='ndvi', look
     for i in range(tensor.shape[1]-lookback-1):
         vecs = tensor[:, i:i+lookback, tinds].reshape((tensor.shape[0], lookback*len(tinds)))
         X.append(np.concatenate([vecs, tensor[:, i+lookback, sinds]], axis=1))
-        if not difference: y.append(tensor[:, i+lookback+1, feat2ind[att]])
-        else: y.append(tensor[:, i+lookback+1, feat2ind[att]] - tensor[:, i+lookback, feat2ind[att]])
+        y.append(tensor[:, i + lookback + 1, feat2ind[att]] - tensor[:, i + lookback, feat2ind[att]])
         years.append(np.ones(len(y[-1]))*i)
     X, y = np.array(X), np.array(y)
     X, y = X.reshape(-1, X.shape[-1]), y.reshape(-1)
@@ -165,18 +170,12 @@ if __name__ == '__main__':
     # print(tens.shape, tens2.shape)
     # print(len(dates), len(years))
     # print(att2in)
-    t, f2i, i2f = load_csv_tensor()
+    # t, f2i, i2f = load_csv_tensor()
     # print(f2i)
     # print(t.shape)
     # X, y, n = tensor_to_features(t, f2i, lookback=2, remove_att=True)
     # print(n)
     # print(X.shape)
-    ndvi = t[:, :, f2i['ndvi']]
-    w = 1
-    ndvi = ndvi[:, w:] - np.array([np.mean(ndvi[:, i:i+w], axis=1) for i in range(0, ndvi.shape[1]-w)]).T
-    print(ndvi.shape)
-    import matplotlib.pyplot as plt
-    plt.figure()
-    plt.plot(ndvi[:10].T)
-    plt.plot(np.mean(ndvi, axis=0), 'k', lw=2)
-    plt.show()
+    X, y, feats, ye = load_learnable(remove_att=True, difference=True)
+    print(feats)
+    print(X.shape, y.shape, ye.shape)
